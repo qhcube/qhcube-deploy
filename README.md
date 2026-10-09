@@ -24,8 +24,8 @@ Usuario `qhcube_usr`:
 
 ```
 ~/qhcube-deploy/          # este repo + .env (no versionado)
-~/qhcube-back  -> ~/releases/<ver>/qhcube-back     # symlink a la versión activa
-~/qhcube-front -> ~/releases/<ver>/qhcube-front    # symlink a la versión activa
+~/qhcube-back  -> releases/<ver>/qhcube-back       # symlink (relativo) a la versión activa
+~/qhcube-front -> releases/<ver>/qhcube-front      # symlink (relativo) a la versión activa
 ~/releases/<ver>/
     qhcube-back/qhcube-back-<ver>.jar
     qhcube-front/                                  # dist del frontend desempaquetado
@@ -48,12 +48,12 @@ En los ejemplos, `VER=X.Y.Z`.
 ```bash
 VER=X.Y.Z
 DEST=~/Proyectos/04\ -\ QHCube/releases/$VER
-mkdir -p "$DEST"
+mkdir -p "$DEST"/qhcube-back
 
 # Backend
 cd qhcube-back && git checkout v$VER
 ./mvnw clean package
-cp target/qhcube-back-$VER.jar "$DEST"/
+cp target/qhcube-back-$VER.jar "$DEST"/qhcube-back/
 
 # Frontend (la URL del backend se toma de src/.env.production)
 cd ../qhcube && git checkout v$VER
@@ -61,15 +61,23 @@ npm ci
 npm run build
 tar czf "$DEST"/qhcube-front-$VER.tar.gz -C dist .
 
-# Sumas de comprobación
-cd "$DEST" && sha256sum qhcube-back-$VER.jar qhcube-front-$VER.tar.gz > SHA256SUMS
+# Sumas de comprobación (con la misma estructura que tendrá en el servidor)
+cd "$DEST" && sha256sum qhcube-back/qhcube-back-$VER.jar qhcube-front-$VER.tar.gz > SHA256SUMS
+```
+
+La carpeta local de la versión queda así, con la misma estructura que en el servidor:
+
+```
+releases/<ver>/
+    qhcube-back/qhcube-back-<ver>.jar
+    qhcube-front-<ver>.tar.gz
+    SHA256SUMS
 ```
 
 ### 2. Subirlos al servidor
 
 ```bash
-ssh qhcube_usr@qhcube.etsisi.upm.es mkdir -p releases/$VER
-scp "$DEST"/* qhcube_usr@qhcube.etsisi.upm.es:releases/$VER/
+scp -r "$DEST" qhcube_usr@qhcube.etsisi.upm.es:releases/
 ```
 
 ### 3. Preparar la versión (en el servidor)
@@ -78,8 +86,7 @@ scp "$DEST"/* qhcube_usr@qhcube.etsisi.upm.es:releases/$VER/
 VER=X.Y.Z
 cd ~/releases/$VER
 sha256sum -c SHA256SUMS                  # ambos deben dar OK
-mkdir qhcube-back qhcube-front
-mv qhcube-back-$VER.jar qhcube-back/
+mkdir qhcube-front
 tar xzf qhcube-front-$VER.tar.gz -C qhcube-front
 ```
 
@@ -90,8 +97,9 @@ Antes de activar la versión nueva, siempre: ver [Backups](#backups).
 ### 5. Activar la versión
 
 ```bash
-ln -sfn ~/releases/$VER/qhcube-back  ~/qhcube-back
-ln -sfn ~/releases/$VER/qhcube-front ~/qhcube-front
+cd ~
+ln -sfn releases/$VER/qhcube-back  qhcube-back
+ln -sfn releases/$VER/qhcube-front qhcube-front
 cd ~/qhcube-deploy
 docker compose up -d --force-recreate
 docker compose logs -f spring-prod       # esperar a "Started ..." y salir con Ctrl+C
@@ -111,8 +119,9 @@ Las versiones anteriores siguen en `~/releases/`. Basta con apuntar los symlinks
 
 ```bash
 PREV=X.Y.Z
-ln -sfn ~/releases/$PREV/qhcube-back  ~/qhcube-back
-ln -sfn ~/releases/$PREV/qhcube-front ~/qhcube-front
+cd ~
+ln -sfn releases/$PREV/qhcube-back  qhcube-back
+ln -sfn releases/$PREV/qhcube-front qhcube-front
 cd ~/qhcube-deploy
 docker compose up -d --force-recreate
 ```
