@@ -10,7 +10,7 @@ services:
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - /home/qhcube_usr/qhcube-front:/srv/front:ro
-      - caddy_data:/data
+      - caddy_data:/data  
       - caddy_config:/config
     depends_on:
       - spring-prod
