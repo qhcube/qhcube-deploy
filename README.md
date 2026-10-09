@@ -129,6 +129,42 @@ docker compose up -d --force-recreate
 Si la versión nueva había cambiado el esquema de la BD de forma incompatible, restaurar además la copia de
 seguridad hecha antes del despliegue (ver abajo).
 
+## Cambiar la configuración
+
+`~/qhcube-deploy` en el servidor es un clon de este repo. Accede a GitHub con una *deploy key* de solo lectura, que
+está en `~/.ssh/id_ed25519`. Los cambios se hacen siempre en local y el servidor solo los descarga: **nunca se editan
+los ficheros directamente en el servidor**.
+
+1. En local: editar, hacer commit y `git push`.
+2. En el servidor:
+
+   ```bash
+   cd ~/qhcube-deploy
+   git pull
+   ```
+
+3. Aplicar los cambios:
+
+   - Si ha cambiado `compose.yml`:
+
+     ```bash
+     docker compose up -d
+     ```
+
+     Compose solo recrea los contenedores cuya configuración ha cambiado.
+
+   - Si ha cambiado el `Caddyfile`:
+
+     ```bash
+     docker compose up -d --force-recreate caddy
+     ```
+
+     Hay que recrear el contenedor porque `git pull` sustituye el fichero por uno nuevo en lugar de modificarlo, y el
+     contenedor seguiría viendo el antiguo.
+
+   - Si ha cambiado `.env`: este fichero no está en git, así que se edita a mano en el servidor y después se ejecuta
+     `docker compose up -d --force-recreate`.
+
 ## Backups
 
 ### Volcado
@@ -166,7 +202,20 @@ ssh -L 8081:127.0.0.1:8081 -L 3306:127.0.0.1:3306 qhcube_usr@qhcube.etsisi.upm.e
 ## Instalación desde cero
 
 1. Instalar Docker y el plugin Compose en el servidor.
-2. Clonar este repo en `~/qhcube-deploy`.
+2. Crear la deploy key y clonar el repo:
+
+   ```bash
+   ssh-keygen -t ed25519 -N "" -C "qhcube_usr@qhcube deploy key"
+   cat ~/.ssh/id_ed25519.pub
+   ```
+
+   Añadir la clave pública en GitHub (**qhcube-deploy → Settings → Deploy keys**, sin permiso de escritura) y
+   después:
+
+   ```bash
+   git clone git@github.com:qhcube/qhcube-deploy.git ~/qhcube-deploy
+   ```
+
 3. `cp .env.example .env` y rellenar los valores (están en KeePass). `chmod 600 .env`.
 4. Preparar una versión en `~/releases/<ver>/` y crear los symlinks (pasos 2, 3 y 5 de
    [Publicar una versión nueva](#publicar-una-versión-nueva)).
