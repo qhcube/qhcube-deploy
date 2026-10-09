@@ -1,0 +1,23 @@
+{
+    email ivan.garcia@upm.es
+}
+
+qhcube.etsisi.upm.es {
+    encode gzip
+
+    # Backend: Caddy habla HTTP con Spring dentro de la red de Docker
+    handle /free/* {
+        reverse_proxy spring-prod:9000
+    }
+    handle /api/* {
+        reverse_proxy spring-prod:9000
+    }
+
+    # Frontend (Vue): ficheros estáticos con fallback a index.html
+    # para rutas como /email-validation
+    handle {
+        root * /srv/front
+        try_files {path} /index.html
+        file_server
+    }
+}

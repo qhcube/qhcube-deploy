@@ -1,0 +1,73 @@
+services:
+
+  caddy:
+    image: caddy:2.8
+    container_name: caddy-prod
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - /home/qhcube_usr/qhcube-front:/srv/front:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - spring-prod
+    networks:
+      - prod_network
+
+  spring-prod:
+    image: eclipse-temurin:17-jre-focal
+    container_name: spring-prod
+    restart: unless-stopped
+    volumes:
+      - /home/qhcube_usr/qhcube-back:/opt/app:ro
+    command: ["sh", "-c", "exec java -Dspring.profiles.active=prod -jar /opt/app/qhcube-back-*.jar"]
+    environment:
+      TZ: Europe/Madrid
+      SERVER_PORT: 9000
+      SERVER_SSL_ENABLED: "false"
+      SPRING_DATASOURCE_URL: jdbc:mysql://db-prod:3306/${MYSQL_DATABASE}
+      SPRING_DATASOURCE_USERNAME: ${DB_USER}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+      SPRING_MAIL_PASSWORD: ${MAIL_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+    depends_on:
+      - db-prod
+    networks:
+      - prod_network
+
+  db-prod:
+    image: mysql:8.0.33          # versión fijada: NO usar "mysql" a secas
+    container_name: mysql-prod
+    command: --default-authentication-plugin=mysql_native_password
+    restart: unless-stopped
+    volumes:
+      - /home/qhcube_usr/mysql_prod_data:/var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      TZ: Europe/Madrid
+    ports:
+      - "127.0.0.1:3306:3306"    # solo accesible por túnel SSH
+    networks:
+      - prod_network
+
+  adminer-prod:
+    image: adminer
+    container_name: adminer-prod
+    restart: unless-stopped
+    environment:
+      ADMINER_DEFAULT_SERVER: db-prod
+    ports:
+      - "127.0.0.1:8081:8080"
+    networks:
+      - prod_network
+
+volumes:
+  caddy_data:
+  caddy_config:
+
+networks:
+  prod_network:
+    driver: bridge
