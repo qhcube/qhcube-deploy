@@ -40,7 +40,7 @@ hay que recrear los contenedores con `docker compose up -d --force-recreate`.
 
 ## Publicar una versión nueva
 
-Se supone que la versión ya está etiquetada (`vX.Y.Z`) en `master` de `qhcube-front` y `qhcube-back`.
+Se supone que la versión ya está etiquetada (`vX.Y.Z`) en `main` de `qhcube-front` y `qhcube-back`.
 En los ejemplos, `VER=X.Y.Z`.
 
 ### 1. Construir los artefactos (en local)
@@ -56,7 +56,7 @@ cd qhcube-back && git checkout v$VER
 cp target/qhcube-back-$VER.jar "$DEST"/qhcube-back/
 
 # Frontend (la URL del backend se toma de src/.env.production)
-cd ../qhcube && git checkout v$VER
+cd ../qhcube-front && git checkout v$VER
 npm ci
 npm run build
 tar czf "$DEST"/qhcube-front-$VER.tar.gz -C dist .
@@ -102,7 +102,7 @@ ln -sfn releases/$VER/qhcube-back  qhcube-back
 ln -sfn releases/$VER/qhcube-front qhcube-front
 cd ~/qhcube-deploy
 docker compose up -d --force-recreate
-docker compose logs -f spring-prod       # esperar a "Started ..." y salir con Ctrl+C
+docker compose logs -f spring-prod       # spring-prod debe arrancar y aparecer "up"
 ```
 
 (`-n` hace que `ln` sustituya el symlink en vez de crear uno nuevo dentro del directorio al que apunta.)
