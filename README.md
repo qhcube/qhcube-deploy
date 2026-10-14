@@ -102,7 +102,7 @@ ln -sfn releases/$VER/qhcube-back  qhcube-back
 ln -sfn releases/$VER/qhcube-front qhcube-front
 cd ~/qhcube-deploy
 docker compose up -d --force-recreate
-docker compose logs -f spring-prod       # spring-prod debe arrancar y aparecer "up"
+docker compose logs -f spring-prod       # Comprobar que no hay errores y salir con Ctrl+C
 ```
 
 (`-n` hace que `ln` sustituya el symlink en vez de crear uno nuevo dentro del directorio al que apunta.)
