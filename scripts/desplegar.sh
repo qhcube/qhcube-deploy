@@ -70,3 +70,88 @@ if $SOLO_DESCARGA; then
     exit 0
 fi
 
+# --- Preparación de la versión ----------------------------------------------
+
+if [ "$RELEASES" != "$HOME/releases" ]; then
+    echo "RELEASES apunta a $RELEASES: solo se permite con --solo-descarga." >&2
+    exit 1
+fi
+
+DIR="$RELEASES/$VER"
+
+if [ "$SOLO" != "front" ]; then
+    mkdir -p "$DIR/qhcube-back"
+    cp "$DESCARGAS/back/qhcube-back-$VER.jar" "$DIR/qhcube-back/"
+fi
+if [ "$SOLO" != "back" ]; then
+    mkdir -p "$DIR/qhcube-front"
+    tar xzf "$DESCARGAS/front/qhcube-front-$VER.tar.gz" -C "$DIR/qhcube-front"
+    grep -rqF "versionFront:\`$VER\`" "$DIR/qhcube-front/assets" \
+        || { echo "El frontend descomprimido no es la versión $VER." >&2; exit 1; }
+fi
+
+# --- Copia de seguridad de la base de datos ---------------------------------
+
+BACKUP="$HOME/backups/$(date +%F)/qhcube_db-$(date +%H%M%S).sql"
+mkdir -p "$(dirname "$BACKUP")"
+echo "Copia de seguridad en $BACKUP..."
+docker exec mysql-prod sh -c 'exec mysqldump -uroot -p"$MYSQL_ROOT_PASSWORD" --single-transaction --routines qhcube_db' > "$BACKUP"
+[ -s "$BACKUP" ] || { echo "La copia de seguridad está vacía." >&2; exit 1; }
+
+# --- Confirmación -----------------------------------------------------------
+
+ANTES_BACK="$(readlink "$HOME/qhcube-back")"
+ANTES_FRONT="$(readlink "$HOME/qhcube-front")"
+echo
+echo "Ahora:   back → $ANTES_BACK"
+echo "         front → $ANTES_FRONT"
+echo "Nueva versión: $VER ${SOLO:+(solo $SOLO)}"
+read -r -p "¿Activar? Escribe 'si' para continuar: " RESPUESTA
+[ "$RESPUESTA" = "si" ] || { echo "Cancelado. No se ha cambiado nada."; exit 1; }
+
+# --- Activación -------------------------------------------------------------
+
+cd "$HOME"
+[ "$SOLO" != "front" ] && ln -sfn "releases/$VER/qhcube-back"  qhcube-back
+[ "$SOLO" != "back" ]  && ln -sfn "releases/$VER/qhcube-front" qhcube-front
+
+cd "$HOME/qhcube-deploy"
+if [ "$SOLO" = "back" ]; then
+    docker compose up -d --force-recreate spring-prod
+else
+    docker compose up -d --force-recreate
+fi
+
+# --- Verificación -----------------------------------------------------------
+
+URL="https://qhcube.etsisi.upm.es"
+OK=true
+
+if [ "$SOLO" != "front" ]; then
+    echo -n "Esperando al backend"
+    VERSION_BACK=""
+    for _ in $(seq 1 30); do
+        VERSION_BACK="$(curl -fsS "$URL/free/version-back" 2>/dev/null | jq -r .version 2>/dev/null || true)"
+        [ "$VERSION_BACK" = "$VER" ] && break
+        echo -n "."; sleep 2
+    done
+    echo
+    if [ "$VERSION_BACK" = "$VER" ]; then echo "✔ Backend $VERSION_BACK"; else echo "✘ Backend responde '$VERSION_BACK'"; OK=false; fi
+fi
+if [ "$SOLO" != "back" ]; then
+    if [ "$(curl -fsS "$URL/" | sha256sum)" = "$(sha256sum < "$DIR/qhcube-front/index.html")" ]; then
+        echo "✔ Frontend $VER"
+    else
+        echo "✘ El frontend servido no es el de la versión $VER"; OK=false
+    fi
+fi
+
+if $OK; then
+    echo "Versión $VER desplegada."
+else
+    echo
+    echo "ALGO HA FALLADO. Para volver a la versión anterior:" >&2
+    echo "  cd ~ && ln -sfn $ANTES_BACK qhcube-back && ln -sfn $ANTES_FRONT qhcube-front" >&2
+    echo "  cd ~/qhcube-deploy && docker compose up -d --force-recreate" >&2
+    exit 1
+fi
