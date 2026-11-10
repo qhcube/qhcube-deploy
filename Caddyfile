@@ -5,7 +5,7 @@
 qhcube.etsisi.upm.es {
 	encode gzip
 
-    # Cabeceras de seguridad para todas las respuestas (front y API)
+	# Cabeceras de seguridad para todas las respuestas (front y API)
 	header {
 		Strict-Transport-Security "max-age=31536000; includeSubDomains"
 		X-Content-Type-Options "nosniff"
