@@ -14,7 +14,7 @@ Repositorios relacionados:
 | `caddy-prod`   | `caddy:2.8`                    | HTTPS (Let's Encrypt automático). `/api/*` y `/free/*` → Spring; el resto → frontend estático | 80, 443                 |
 | `spring-prod`  | `eclipse-temurin:17-jre-focal` | Ejecuta el jar del backend (perfil `prod`, puerto 9000 interno)                            | —                       |
 | `mysql-prod`   | `mysql:8.0.33`                 | Base de datos `qhcube_db`                                                                  | `127.0.0.1:3306`        |
-| `adminer-prod` | `adminer`                      | Administración web de la BD                                                                | `127.0.0.1:8081`        |
+| `adminer-prod` | `adminer:6.3.0`                | Administración web de la BD                                                                | `127.0.0.1:8081`        |
 
 MySQL y Adminer solo escuchan en `127.0.0.1`: se accede a ellos por túnel SSH (ver más abajo).
 
