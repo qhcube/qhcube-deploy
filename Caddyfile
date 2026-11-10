@@ -17,6 +17,18 @@ qhcube.etsisi.upm.es {
 		defer
 	}
 
+	# Navegador abriendo una URL de la API: se sirve el front para que muestre su página de error.
+	# Las llamadas del front (axios) no piden text/html y siguen yendo a Spring.
+	@browserApi {
+		path /api/* /free/*
+		header Accept *text/html*
+	}
+	handle @browserApi {
+		root * /srv/front
+		rewrite * /index.html
+		file_server
+	}
+
 	# Backend: Caddy habla HTTP con Spring dentro de la red de Docker
 	handle /free/* {
 		reverse_proxy spring-prod:9000
