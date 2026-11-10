@@ -232,3 +232,11 @@ ssh -L 8081:127.0.0.1:8081 -L 3306:127.0.0.1:3306 qhcube_usr@qhcube.etsisi.upm.e
 
    Después, restaurar el último backup si lo hay.
 7. Desplegar la última versión: `./scripts/desplegar.sh X.Y.Z`.
+
+## Licencia
+
+Copyright (C) 2023-2026 Jesús García López de Lacalle, Universidad Politécnica de Madrid, Iván García Alcaide.
+
+Este programa es software libre: puede redistribuirse y/o modificarse según los términos de la Licencia Pública General de GNU (GPL) publicada por la Free Software Foundation, ya sea la versión 3 de la licencia o, a elección del usuario, cualquier versión posterior.
+
+Se distribuye con la esperanza de que sea útil, pero SIN NINGUNA GARANTÍA, ni siquiera la garantía implícita de COMERCIABILIDAD o IDONEIDAD PARA UN PROPÓSITO PARTICULAR. Consulte el fichero [LICENSE](LICENSE) para más detalles.
