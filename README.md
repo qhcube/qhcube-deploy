@@ -23,17 +23,16 @@ MySQL y Adminer solo escuchan en `127.0.0.1`: se accede a ellos por túnel SSH (
 Usuario `qhcube_usr`:
 
 ```
-~/qhcube-deploy/          # este repo + .env (no versionado)
-~/.config/qhcube/github-token                      # token de solo lectura para descargar las releases (chmod 600)
-~/qhcube-back  -> releases/<ver>/qhcube-back       # symlink (relativo) a la versión activa
-~/qhcube-front -> releases/<ver>/qhcube-front      # symlink (relativo) a la versión activa
+~/qhcube-deploy/                                    # este repo + .env (no versionado)
+~/qhcube-back  -> releases/<ver>/qhcube-back        # symlink (relativo) a la versión activa
+~/qhcube-front -> releases/<ver>/qhcube-front       # symlink (relativo) a la versión activa
 ~/releases/<ver>/
-    descargas/back/                                # ficheros descargados de la release (jar + SHA256SUMS)
-    descargas/front/                               # ídem (tar.gz + SHA256SUMS)
+    descargas/back/                                 # ficheros descargados de la release (jar + SHA256SUMS)
+    descargas/front/                                # ídem (tar.gz + SHA256SUMS)
     qhcube-back/qhcube-back-<ver>.jar
-    qhcube-front/                                  # dist del frontend desempaquetado
-~/mysql_prod_data/        # datos de MySQL
-~/backups/<fecha>/        # volcados de la BD
+    qhcube-front/                                   # dist del frontend desempaquetado
+~/mysql_prod_data/                                  # datos de MySQL
+~/backups/<fecha>/                                  # volcados de la BD
 ```
 
 Docker resuelve los symlinks **al crear el contenedor**, no al reiniciarlo. Por eso, después de cambiar un symlink
@@ -88,13 +87,10 @@ Si algo falla, se detiene; si falla la verificación, muestra los comandos para 
 
 Para comprobar una descarga sin tocar nada: `RELEASES=/tmp/prueba ./scripts/desplegar.sh X.Y.Z --solo-descarga`.
 
-El token de descarga (`~/.config/qhcube/github-token`) es un *fine-grained token* de la organización con
-**Contents: Read-only** sobre `qhcube-back` y `qhcube-front`. Caduca: cuando lo haga, generar otro igual y
-sustituir el fichero (`chmod 600`).
-
-> Hibernate está con `ddl-auto=update`: crea tablas y columnas nuevas, pero **nunca modifica columnas existentes**.
-> Si una versión cambia el tipo o tamaño de una columna, hay que hacer el `ALTER TABLE` a mano
-> (ej.: `movs_list` se pasó a `LONGTEXT` a mano en la 0.1.1).
+> Hibernate está con `ddl-auto=update`: crea tablas y columnas nuevas, y desde Hibernate 7 (QHCube 0.6.0),
+> también intenta cambiar el tipo de las columnas existentes. Si no puede (por ejemplo, por una clave ajena),
+> solo deja un aviso `Error executing DDL` en el log y sigue arrancando. Después de desplegar, revisar el log y,
+> si aparece el aviso, hacer el `ALTER TABLE` a mano (ej.: `player.id` y `game.player_id` a `BIGINT` en la 0.6.0).
 
 ## Volver a una versión anterior (rollback)
 
@@ -174,8 +170,6 @@ docker exec mysql-prod sh -c 'exec mysqldump -uroot -p"$MYSQL_ROOT_PASSWORD" --s
 La contraseña de root no aparece en la línea de órdenes: `$MYSQL_ROOT_PASSWORD` se expande **dentro** del contenedor
 (por eso va entre comillas simples).
 
-Se guardan tres copias: en el servidor, en el NAS (otro edificio) y en un disco USB desconectado.
-
 ### Restauración
 
 ```bash
@@ -188,7 +182,7 @@ docker exec -i mysql-prod sh -c 'exec mysql -uroot -p"$MYSQL_ROOT_PASSWORD" qhcu
 Desde el equipo local, abrir un túnel SSH:
 
 ```bash
-ssh -L 8081:127.0.0.1:8081 -L 3306:127.0.0.1:3306 qhcube_usr@qhcube.etsisi.upm.es
+ssh -L 8081:127.0.0.1:8081 -L 3306:127.0.0.1:3306 <usuario>@<servidor>
 ```
 
 - Adminer: <http://localhost:8081> (servidor `db-prod`).
@@ -211,17 +205,9 @@ ssh -L 8081:127.0.0.1:8081 -L 3306:127.0.0.1:3306 qhcube_usr@qhcube.etsisi.upm.e
    git clone git@github.com:qhcube/qhcube-deploy.git ~/qhcube-deploy
    ```
 
-3. `cp .env.example .env` y rellenar los valores (están en KeePass). `chmod 600 .env`.
-4. Guardar el token de descarga (ver [Desplegar](#3-desplegar-en-el-servidor)):
-
-   ```bash
-   mkdir -p ~/.config/qhcube && chmod 700 ~/.config/qhcube
-   read -s TOKEN && printf '%s' "$TOKEN" > ~/.config/qhcube/github-token && unset TOKEN
-   chmod 600 ~/.config/qhcube/github-token
-   ```
-
-5. `docker compose up -d` para arrancar MySQL.
-6. La primera vez, MySQL solo crea el usuario `root`: la base de datos y el usuario de la aplicación hay que crearlos
+3. `cp .env.example .env` y rellenar los valores. `chmod 600 .env`.
+4. `docker compose up -d` para arrancar MySQL.
+5. La primera vez, MySQL solo crea el usuario `root`: la base de datos y el usuario de la aplicación hay que crearlos
    a mano (los valores de `MYSQL_DATABASE`, `DB_USER` y `DB_PASSWORD` del `.env`):
 
    ```sql
@@ -231,7 +217,7 @@ ssh -L 8081:127.0.0.1:8081 -L 3306:127.0.0.1:3306 qhcube_usr@qhcube.etsisi.upm.e
    ```
 
    Después, restaurar el último backup si lo hay.
-7. Desplegar la última versión: `./scripts/desplegar.sh X.Y.Z`.
+6. Desplegar la última versión: `./scripts/desplegar.sh X.Y.Z`.
 
 ## Licencia
 
