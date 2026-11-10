@@ -27,7 +27,12 @@ case "$SOLO" in
     *) echo "--solo debe ser 'back' o 'front', no '$SOLO'" >&2; exit 1 ;;
 esac
 
-TOKEN="$(cat "$TOKEN_FILE")"
+# Token de solo lectura para descargar de repos privados. Si no existe el fichero,
+# se descarga sin autenticación (suficiente con repos públicos).
+AUTH=()
+if [ -f "$TOKEN_FILE" ]; then
+    AUTH=(-H "Authorization: Bearer $(cat "$TOKEN_FILE")")
+fi
 
 # --- Funciones --------------------------------------------------------------
 
@@ -36,11 +41,11 @@ descargar() {   # descargar <repo> <carpeta destino>
     local api="https://api.github.com/repos/$ORG/$repo/releases"
     local release
     echo "Descargando $repo v$VER..."
-    release="$(curl -fsSL -H "Authorization: Bearer $TOKEN" "$api/tags/v$VER")"
+    release="$(curl -fsSL "${AUTH[@]}" "$api/tags/v$VER")"
     mkdir -p "$destino"
     jq -r '.assets[] | "\(.id) \(.name)"' <<< "$release" \
         | while read -r id nombre; do
-              curl -fsSL -H "Authorization: Bearer $TOKEN" -H "Accept: application/octet-stream" \
+              curl -fsSL "${AUTH[@]}" -H "Accept: application/octet-stream" \
                   -o "$destino/$nombre" "$api/assets/$id"
               echo "  $nombre"
           done
