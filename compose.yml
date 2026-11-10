@@ -54,7 +54,7 @@ services:
       - prod_network
 
   adminer-prod:
-    image: adminer
+    image: adminer:6.3.0
     container_name: adminer-prod
     restart: unless-stopped
     environment:
